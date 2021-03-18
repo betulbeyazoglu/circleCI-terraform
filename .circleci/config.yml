@@ -69,6 +69,7 @@ workflows:
   plan_approve_apply:
     jobs:
       - plan-apply
+          context: AWS
       - hold-apply:
           type: approval
           requires:
