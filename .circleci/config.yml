@@ -8,7 +8,11 @@ workflows:
   version: 2
   production_infrastructure:
     jobs:
-      - terraform_init_plan_production
+      - terraform_init_plan_production:
+          filters:
+            branches:
+              only:
+                - master
       - pause_workflow:
           type: approval
           requires:
@@ -16,15 +20,43 @@ workflows:
       - terraform_apply_production:
           requires:
             - pause_workflow
+          filters:
+            branches:
+              only:
+                - master
       - plan-destroy:
           requires:
             - terraform_apply_production
       - destroy:
           requires:
             - plan-destroy
+  staging_infrastructure:
+    jobs:
+      - terraform_init_plan_staging:
+          filters:
+            branches:
+              ignore:
+                - master
+      - pause_workflow:
+          type: approval
+          requires:
+            - terraform_init_plan_staging
+      - terraform_apply_staging:
+          requires:
+            - pause_workflow
+          filters:
+            branches:
+              ignore:
+                - master
+      - plan-destroy_stg:
+          requires:
+            - terraform_apply_staging
+      - destroy_stg:
+          requires:
+            - plan-destroy_stg
 jobs:
   terraform_init_plan_production:
-    description: Inits terraform directory for staging
+    description: Inits terraform directory for production 
     # working_directory: 
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
@@ -34,7 +66,7 @@ jobs:
           name: terraform init & plan
           command: |
             terraform init -input=false
-      - run: terraform workspace select betul_test
+      - run: terraform workspace select betul_prod
       - run:
           name: terraform plan
           command: |
@@ -79,7 +111,62 @@ jobs:
           name: terraform destroy
           command: |
             terraform apply -auto-approve tfdestroy
+  terraform_init_plan_staging:
+    description: Inits terraform directory for staging
+    # working_directory: 
+    docker:
+      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+    steps:
+      - checkout
+      - run:
+          name: terraform init & plan
+          command: |
+            terraform init -input=false
+      - run: terraform workspace select betul_stg
+      - run:
+          name: terraform plan
+          command: |
+            terraform plan -out tfapply
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+  terraform_apply_staging:
+    docker:
+      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+    steps:
+      - attach_workspace:
+          at: .
+      - run: terraform apply -auto-approve tfapply
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+  plan-destroy_stg:
+    docker:
+      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: terraform create destroy plan
+          command: |
+            terraform plan -destroy -out tfdestroy
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
 
+  destroy_stg:
+    docker:
+      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: terraform destroy
+          command: |
+            terraform apply -auto-approve tfdestroy
 
       # - slack/status:
       #     failure_message: "Deployment of << parameters.stack-name >> to <<parameters.env >> has failed!"
