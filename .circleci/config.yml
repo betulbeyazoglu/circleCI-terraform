@@ -12,7 +12,7 @@ workflows:
       - pause_workflow:
           type: approval
           requires:
-            - terraform_plan_production
+            - terraform_init_plan_production
       - terraform_apply_production:
           context: terraform
           requires:
