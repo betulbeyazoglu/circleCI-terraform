@@ -96,9 +96,10 @@ jobs:
           name: terraform init
           command: |
             terraform init 
-    persist_to_workspace:
-      root: .
-      paths:
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
   terraform_plan_production:
     description: Plans
     # working_directory: xxxxx
