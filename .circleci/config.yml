@@ -5,43 +5,6 @@ orbs:
   terraform: circleci/terraform@1.2.1
   slack: circleci/slack@4.0
 workflows:
-  staging_infrastructure:
-  jobs:
-    - terraform_init_staging:
-        checkout: true
-        context: terraform
-        filters:
-          branches:
-            ignore:
-              - master
-    - terraform_plan_staging:
-        checkout: true
-        context: terraform
-        persist-workspace: true
-        requires:
-            - terraform_init_staging
-        filters:
-          branches:
-            ignore:
-              - master
-    - pause_workflow:
-        type: approval
-        requires:
-          - terraform_plan_staging
-        filters:
-          branches:
-            ignore:
-              - master
-    - terraform_apply_staging:
-        attach-workspace: true
-        checkout: true
-        context: terraform
-        requires:
-          - pause_workflow
-        filters:
-          branches:
-            ignore:
-              - master
   production_infrastructure:
     jobs:
       - terraform_init_production:
