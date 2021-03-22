@@ -66,7 +66,7 @@ jobs:
           name: terraform init & plan
           command: |
             terraform init -input=false
-      - run: terraform workspace select betul_test
+      - run: terraform workspace select betul_prod
       - run:
           name: terraform plan
           command: |
@@ -111,7 +111,62 @@ jobs:
           name: terraform destroy
           command: |
             terraform apply -auto-approve tfdestroy
+  terraform_init_plan_staging:
+    description: Inits terraform directory for staging
+    # working_directory: 
+    docker:
+      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+    steps:
+      - checkout
+      - run:
+          name: terraform init & plan
+          command: |
+            terraform init -input=false
+      - run: terraform workspace select betul_stg
+      - run:
+          name: terraform plan
+          command: |
+            terraform plan -out tfapply
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+  terraform_apply_staging:
+    docker:
+      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+    steps:
+      - attach_workspace:
+          at: .
+      - run: terraform apply -auto-approve tfapply
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+  plan-destroy_stg:
+    docker:
+      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: terraform create destroy plan
+          command: |
+            terraform plan -destroy -out tfdestroy
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
 
+  destroy_stg:
+    docker:
+      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: terraform destroy
+          command: |
+            terraform apply -auto-approve tfdestroy
 
       # - slack/status:
       #     failure_message: "Deployment of << parameters.stack-name >> to <<parameters.env >> has failed!"
