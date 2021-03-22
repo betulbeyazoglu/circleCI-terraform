@@ -37,7 +37,7 @@ workflows:
       - pause_workflow:
           type: approval
           requires:
-            - terraform/plan
+            - terraform_plan_staging
             # - slack/on-hold
           filters:
            branches:
