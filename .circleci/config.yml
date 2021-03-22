@@ -11,7 +11,7 @@ workflows:
       - terraform_init_plan_production:
           filters:
             branches:
-              ignore:
+              only:
                 - master
       - pause_workflow:
           type: approval
@@ -22,7 +22,7 @@ workflows:
             - pause_workflow
           filters:
             branches:
-              ignore:
+              only:
                 - master
       - plan-destroy:
           requires:
