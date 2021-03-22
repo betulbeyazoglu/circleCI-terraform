@@ -5,85 +5,85 @@ orbs:
   terraform: circleci/terraform@1.2.1
   slack: circleci/slack@4.0
 workflows:
-    staging_infrastructure:
+  staging_infrastructure:
+  jobs:
+    - terraform_init_staging:
+        checkout: true
+        context: terraform
+        filters:
+          branches:
+            ignore:
+              - master
+    - terraform_plan_staging:
+        checkout: true
+        context: terraform
+        persist-workspace: true
+        requires:
+            - terraform_init_staging
+        filters:
+          branches:
+            ignore:
+              - master
+    - pause_workflow:
+        type: approval
+        requires:
+          - terraform_plan_staging
+        filters:
+          branches:
+            ignore:
+              - master
+    - terraform_apply_staging:
+        attach-workspace: true
+        checkout: true
+        context: terraform
+        requires:
+          - pause_workflow
+        filters:
+          branches:
+            ignore:
+              - master
+  production_infrastructure:
     jobs:
-      - terraform_init_staging:
+      - terraform_init_production:
           checkout: true
           context: terraform
           filters:
-           branches:
-              ignore:
+          branches:
+              only:
                 - master
-      - terraform_plan_staging:
+      - terraform_plan_production:
           checkout: true
           context: terraform
           persist-workspace: true
           requires:
-             - terraform_init_staging
+            - terraform_init_production
           filters:
-           branches:
-              ignore:
+          branches:
+              only:
                 - master
       - pause_workflow:
           type: approval
           requires:
-            - terraform_plan_staging
+            - terraform_plan_production
           filters:
-           branches:
-              ignore:
+          branches:
+              only:
                 - master
-      - terraform_apply_staging:
+      - terraform_apply_production:
           attach-workspace: true
           checkout: true
           context: terraform
-          requires:
-            - pause_workflow
           filters:
             branches:
-              ignore:
-                - master
-    production_infrastructure:
-      jobs:
-        - terraform_init_production:
-            checkout: true
-            context: terraform
-            filters:
+              only: master
+          requires:
+            - pause_workflow
+      - destroy:
+          filters:
             branches:
-                only:
-                  - master
-        - terraform_plan_production:
-            checkout: true
-            context: terraform
-            persist-workspace: true
-            requires:
-              - terraform_init_production
-            filters:
-            branches:
-                only:
-                  - master
-        - pause_workflow:
-            type: approval
-            requires:
-              - terraform_plan_production
-            filters:
-            branches:
-                only:
-                  - master
-        - terraform_apply_production:
-            attach-workspace: true
-            checkout: true
-            context: terraform
-            filters:
-              branches:
-                only: master
-            requires:
-              - pause_workflow
-        - destroy:
-            filters:
-              branches:
-                only: master
-            requires:
-              - terraform_apply_production
+              only: master
+          requires:
+            - terraform_apply_production
 jobs:
   terraform_init_production:
     description: Inits terraform directory for staging
