@@ -5,16 +5,10 @@ orbs:
   terraform: circleci/terraform@1.2.1
   slack: circleci/slack@4.0
 workflows:
+  version: 2
   production_infrastructure:
     jobs:
-      - terraform_init_production:
-          # checkout: true
-          context: terraform
-          filters:
-          # branches:
-          #     only:
-          #       - main
-      - terraform_plan_production:
+      - terraform_init_plan_production:
           checkout: true
           context: terraform
           persist-workspace: true
@@ -28,50 +22,28 @@ workflows:
           type: approval
           requires:
             - terraform_plan_production
-          filters:
-          branches:
-              only:
-                - main
       - terraform_apply_production:
-          attach-workspace: true
-          checkout: true
           context: terraform
-          filters:
-            branches:
-              only: main
           requires:
             - pause_workflow
+      - plan-destroy:
+          requires:
+            - terraform_apply_production
       - destroy:
-          filters:
-            branches:
-              only: main
           requires:
             - terraform_apply_production
 jobs:
-  terraform_init_production:
+  terraform_init_plan_production:
     description: Inits terraform directory for staging
     # working_directory: 
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
-      # - checkout
-      - run:
-          name: terraform init
-          command: |
-            terraform init 
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .
-  terraform_plan_production:
-    description: Plans
-    # working_directory: xxxxx
-    docker:
-      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
-    steps:
       - checkout
-      - attach_workspace:
-          at: .
+      - run:
+          name: terraform init & plan
+          command: |
+            terraform init -input=false
       - run: terraform workspace new betul_test
       - run:
           name: terraform plan
@@ -92,6 +64,21 @@ jobs:
           root: .
           paths:
             - .
+  plan-destroy:
+    docker:
+      - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: terraform create destroy plan
+          command: |
+            terraform plan -destroy -out tfdestroy
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+
   destroy:
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
@@ -101,7 +88,7 @@ jobs:
       - run:
           name: terraform destroy
           command: |
-            terraform destroy -auto-approve 
+            terraform apply -auto-approve tfdestroy
 
 
       # - slack/status:
@@ -159,7 +146,7 @@ jobs:
 #       - run:
 #           name: terraform create destroy plan
 #           command: |
-#             terraform plan -destroy -out tfdestroy # -var-file variables.tfvars
+#             terraform plan -destroy -out tfdestroy
 #       - persist_to_workspace:
 #           root: .
 #           paths:
