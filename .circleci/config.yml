@@ -39,7 +39,7 @@ jobs:
       - run:
           name: terraform plan
           command: |
-            terraform plan -output tfapply
+            terraform plan -out tfapply
       - persist_to_workspace:
           root: .
           paths:
