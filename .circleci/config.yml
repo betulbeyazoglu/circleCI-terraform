@@ -9,9 +9,6 @@ workflows:
   production_infrastructure:
     jobs:
       - terraform_init_plan_production:
-          checkout: true
-          context: terraform
-          persist-workspace: true
           requires:
             - terraform_init_production
       - pause_workflow:
