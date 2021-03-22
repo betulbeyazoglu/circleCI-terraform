@@ -113,7 +113,7 @@ jobs:
       - run:
           name: terraform plan
           command: |
-            terraform plan -output plan.tf
+            terraform plan -auto-approve -output plan.tf
       - persist_to_workspace:
           root: .
           paths:
@@ -124,12 +124,11 @@ jobs:
     steps:
       - attach_workspace:
           at: .
-      - run: terraform apply plan.tf 
+      - run: terraform apply -auto-approve plan.tf 
       - persist_to_workspace:
           root: .
           paths:
             - .
-
   destroy:
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
@@ -139,7 +138,7 @@ jobs:
       - run:
           name: terraform destroy
           command: |
-            terraform apply -auto-approve 
+            terraform destroy -auto-approve 
 
 
       # - slack/status:
