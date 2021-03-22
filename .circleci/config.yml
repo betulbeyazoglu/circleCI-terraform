@@ -35,7 +35,7 @@ jobs:
           name: terraform init & plan
           command: |
             terraform init -input=false
-      - run: terraform workspace new betul_test
+      - run: terraform workspace select betul_test
       - run:
           name: terraform plan
           command: |
