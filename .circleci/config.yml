@@ -122,9 +122,9 @@ jobs:
       #     fail_only: true
       #     failure_message:
       #     webhook: $webhook
-    persist_to_workspace:
-      root: .
-      paths:
+    # persist_to_workspace:
+    #   root: .
+    #   paths:
   terraform_plan_production:
     description: Plans
     # working_directory: xxxxx
