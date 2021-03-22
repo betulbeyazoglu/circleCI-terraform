@@ -9,8 +9,6 @@ workflows:
   production_infrastructure:
     jobs:
       - terraform_init_plan_production:
-          requires:
-            - terraform_init_production
       - pause_workflow:
           type: approval
           requires:
