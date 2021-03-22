@@ -14,10 +14,6 @@ workflows:
           persist-workspace: true
           requires:
             - terraform_init_production
-          filters:
-          branches:
-              only:
-                - main
       - pause_workflow:
           type: approval
           requires:
