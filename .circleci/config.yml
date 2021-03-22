@@ -11,9 +11,9 @@ workflows:
           # checkout: true
           context: terraform
           filters:
-          branches:
-              only:
-                - main
+          # branches:
+          #     only:
+          #       - main
       - terraform_plan_production:
           checkout: true
           context: terraform
