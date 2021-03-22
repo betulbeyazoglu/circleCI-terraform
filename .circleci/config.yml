@@ -21,7 +21,7 @@ workflows:
             - terraform_apply_production
       - destroy:
           requires:
-            - terraform_apply_production
+            - plan_destroy
 jobs:
   terraform_init_plan_production:
     description: Inits terraform directory for staging
