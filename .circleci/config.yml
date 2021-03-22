@@ -14,7 +14,6 @@ workflows:
           requires:
             - terraform_init_plan_production
       - terraform_apply_production:
-          context: terraform
           requires:
             - pause_workflow
       - plan-destroy:
