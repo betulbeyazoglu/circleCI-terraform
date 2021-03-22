@@ -13,7 +13,7 @@ workflows:
           filters:
           branches:
               only:
-                - master
+                - main
       - terraform_plan_production:
           checkout: true
           context: terraform
@@ -23,7 +23,7 @@ workflows:
           filters:
           branches:
               only:
-                - master
+                - main
       - pause_workflow:
           type: approval
           requires:
@@ -31,20 +31,20 @@ workflows:
           filters:
           branches:
               only:
-                - master
+                - main
       - terraform_apply_production:
           attach-workspace: true
           checkout: true
           context: terraform
           filters:
             branches:
-              only: master
+              only: main
           requires:
             - pause_workflow
       - destroy:
           filters:
             branches:
-              only: master
+              only: main
           requires:
             - terraform_apply_production
 jobs:
