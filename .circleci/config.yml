@@ -8,7 +8,7 @@ workflows:
   version: 2
   production_infrastructure:
     jobs:
-      - terraform_init_plan_production
+      - terraform_init_plan_production:
           filters:
             branches:
               ignore:
