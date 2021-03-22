@@ -1,59 +1,161 @@
-version: 2
+---
+version: 2.1
 orbs:
-  slack: circleci/slack@4.3.1
-
+  # rafay: rafaysystems/rafay@1.0.5
+  terraform: circleci/terraform@1.2.1
+  slack: circleci/slack@4.0
+workflows:
+    staging_infrastructure:
+    jobs:
+      - terraform_init_staging:
+          checkout: true
+          context: terraform
+          filters:
+           branches:
+              ignore:
+                - master
+      - terraform_plan_staging:
+          checkout: true
+          context: terraform
+          persist-workspace: true
+          requires:
+             - terraform-init-staging
+          filters:
+           branches:
+              ignore:
+                - master
+      # - slack/on-hold:
+      #     context:
+      #       - slack-secrets # for reaching out slack
+      #       - my-restricted-context # will only run if the user who approves the hold job is a member of the security group assigned to the context my-restricted-context
+      #     requires:
+      #       - terraform-plan
+      #     filters:
+      #      branches:
+      #         ignore:
+      #           - master
+      - pause_workflow:
+          type: approval
+          requires:
+            - terraform/plan
+            # - slack/on-hold
+          filters:
+           branches:
+              ignore:
+                - master
+      - terraform_apply_staging:
+          attach-workspace: true
+          checkout: true
+          context: terraform
+          requires:
+            - pause_workflow
+          filters:
+            branches:
+              ignore:
+                - master
+  production_infrastructure:
+    jobs:
+      - terraform_init_production:
+          checkout: true
+          context: terraform
+          filters:
+           branches:
+              only:
+                - master
+      - terraform_plan_production:
+          checkout: true
+          context: terraform
+          persist-workspace: true
+          requires:
+             - terraform_init_production
+          filters:
+           branches:
+              only:
+                - master
+      # - slack/on-hold:
+      #     context:
+      #       - slack-secrets # for reaching out slack
+      #       - my-restricted-context # will only run if the user who approves the hold job is a member of the security group assigned to the context my-restricted-context
+      #     requires:
+      #       - terraform_plan_production
+      #     filters:
+      #      branches:
+      #         only:
+      #           - master
+      - pause_workflow:
+          type: approval
+          requires:
+            - terraform_plan_production
+            # - slack/on-hold
+          filters:
+           branches:
+              only:
+                - master
+      - terraform_apply_production:
+          attach-workspace: true
+          checkout: true
+          context: terraform
+          filters:
+            branches:
+              only: master
+          requires:
+            - pause_workflow
 jobs:
-  plan-apply:
-    working_directory: /tmp/project
+  terraform_init_staging:
+    description: Inits terraform directory for staging
+    # working_directory: 
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
       - checkout
       - run:
-          name: terraform init & plan
+          name: terraform init
           command: |
-            terraform init -input=false
-            terraform plan -out tfapply   # -var-file terraform.tfvars
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .
-      # - slack/status
-      #   fail_only: false
-      #   failure_message: nope 
-      #   success_message: good job
-
-  apply:
+            terraform init #-reconfigure -backend-config backends/stg.tf
+      # - slack/status:
+      #     fail_only: true
+      #     failure_message:
+      #     webhook: $webhook
+    persist_to_workspace:
+      root: .
+      paths:
+  terraform_plan_staging:
+    description: Plans
+    # working_directory: xxxxx
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
-      - attach_workspace:
-          at: .
+      - checkout
+      - run: terraform workspace new <workspace-name>
       - run:
-          name: terraform
+          name: terraform plan
           command: |
-            terraform apply -auto-approve tfapply
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .
-
-  plan-destroy:
+            terraform plan -output plan.tf
+      # - slack/notify:
+      #     event: always
+      #     message: |
+      #     [${CIRCLE_USERNAME}] Please check and approve Jobs to manually create the staging infrastructure.
+      #     https://circleci.com/workflow-run/${CIRCLE_WORKFLOW_ID}
+    persist_to_workspace:
+      root: .
+      paths:
+        - .
+  # slack/on-hold:
+  terraform_apply_staging:
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
+      - checkout:
+      # - slack/notify:
+      #     event: always
+      #     message: "Starting deployment of << parameters.stack-name >> to <<parameters.env >>"
       - attach_workspace:
           at: .
-      - run:
-          name: terraform create destroy plan
-          command: |
-            terraform plan -destroy -out tfdestroy # -var-file variables.tfvars
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .
-
-  destroy:
+      - run: terraform apply plan.tf #-var-file var_files/<file name>
+      # - slack/status:
+      #     failure_message: "Deployment of << parameters.stack-name >> to <<parameters.env >> has failed!"
+      #     success_message: "Deployment of << parameters.stack-name >> to <<parameters.env >> has succeeded!"
+    destroy:
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
@@ -62,27 +164,100 @@ jobs:
       - run:
           name: terraform destroy
           command: |
-            terraform apply -auto-approve tfdestroy
+            terraform apply -auto-approve 
 
-workflows:
-  version: 2
-  plan_approve_apply:
-    jobs:
-      - plan-apply
-      - hold-apply:
-          type: approval
-          requires:
-            - plan-apply
-      - apply:
-          requires:
-            - hold-apply
-      - plan-destroy:
-          requires:
-            - apply
-      - hold-destroy:
-          type: approval
-          requires:
-            - plan-destroy
-      - destroy:
-          requires:
-            - hold-destroy
+
+      # - slack/status:
+      #     failure_message: "Deployment of << parameters.stack-name >> to <<parameters.env >> has failed!"
+      #     success_message: "Deployment of << parameters.stack-name >> to <<parameters.env >> has succeeded!"
+
+
+
+# version: 2
+# orbs:
+#   slack: circleci/slack@4.3.1
+
+# jobs:
+#   plan-apply:
+#     working_directory: /tmp/project
+#     docker:
+#       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+#     steps:
+#       - checkout
+#       - run:
+#           name: terraform init & plan
+#           command: |
+#             terraform init -input=false
+#             terraform plan -out tfapply   # -var-file terraform.tfvars
+#       - persist_to_workspace:
+#           root: .
+#           paths:
+#             - .
+#       # - slack/status
+#       #   fail_only: false
+#       #   failure_message: nope 
+#       #   success_message: good job
+
+#   apply:
+#     docker:
+#       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+#     steps:
+#       - attach_workspace:
+#           at: .
+#       - run:
+#           name: terraform
+#           command: |
+#             terraform apply -auto-approve tfapply
+#       - persist_to_workspace:
+#           root: .
+#           paths:
+#             - .
+
+#   plan-destroy:
+#     docker:
+#       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+#     steps:
+#       - attach_workspace:
+#           at: .
+#       - run:
+#           name: terraform create destroy plan
+#           command: |
+#             terraform plan -destroy -out tfdestroy # -var-file variables.tfvars
+#       - persist_to_workspace:
+#           root: .
+#           paths:
+#             - .
+
+#   destroy:
+#     docker:
+#       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
+#     steps:
+#       - attach_workspace:
+#           at: .
+#       - run:
+#           name: terraform destroy
+#           command: |
+#             terraform apply -auto-approve tfdestroy
+
+# workflows:
+#   version: 2
+#   plan_approve_apply:
+#     jobs:
+#       - plan-apply
+#       - hold-apply:
+#           type: approval
+#           requires:
+#             - plan-apply
+#       - apply:
+#           requires:
+#             - hold-apply
+#       - plan-destroy:
+#           requires:
+#             - apply
+#       - hold-destroy:
+#           type: approval
+#           requires:
+#             - plan-destroy
+#       - destroy:
+#           requires:
+#             - hold-destroy
