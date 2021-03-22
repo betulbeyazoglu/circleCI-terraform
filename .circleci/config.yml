@@ -4,16 +4,6 @@ orbs:
   # rafay: rafaysystems/rafay@1.0.5
   terraform: circleci/terraform@1.2.1
   slack: circleci/slack@4.0
-set_terraform_workspace: &set_terraform_workspace
-  run:
-    name: set terraform workspace
-    command: |
-      cd && touch $BASH_ENV
-      if [ "${CIRCLE_BRANCH}" == "master" ]; then
-        echo 'export TF_WORKSPACE=production' >> $BASH_ENV
-      else
-        echo 'export TF_WORKSPACE=staging' >> $BASH_ENV
-      fi
 workflows:
   version: 2
   production_infrastructure:
@@ -43,14 +33,11 @@ jobs:
       - run:
           name: terraform init & plan
           command: |
-            source $BASH_ENV
-            terraform workspace select $TF_WORKSPACE
             terraform init -input=false
+      - run: terraform workspace select betul_test
       - run:
           name: terraform plan
           command: |
-            source $BASH_ENV
-            terraform workspace select $TF_WORKSPACE
             terraform plan -out tfapply
       - persist_to_workspace:
           root: .
@@ -62,11 +49,6 @@ jobs:
     steps:
       - attach_workspace:
           at: .
-      - run:
-          name: terraform plan
-          command: |
-            source $BASH_ENV
-            terraform workspace select $TF_WORKSPACE
       - run: terraform apply -auto-approve tfapply
       - persist_to_workspace:
           root: .
