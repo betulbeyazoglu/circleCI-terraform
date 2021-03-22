@@ -19,26 +19,15 @@ workflows:
           context: terraform
           persist-workspace: true
           requires:
-             - terraform-init-staging
+             - terraform_init_staging
           filters:
            branches:
               ignore:
                 - master
-      # - slack/on-hold:
-      #     context:
-      #       - slack-secrets # for reaching out slack
-      #       - my-restricted-context # will only run if the user who approves the hold job is a member of the security group assigned to the context my-restricted-context
-      #     requires:
-      #       - terraform-plan
-      #     filters:
-      #      branches:
-      #         ignore:
-      #           - master
       - pause_workflow:
           type: approval
           requires:
             - terraform_plan_staging
-            # - slack/on-hold
           filters:
            branches:
               ignore:
@@ -72,21 +61,10 @@ workflows:
             branches:
                 only:
                   - master
-        # - slack/on-hold:
-        #     context:
-        #       - slack-secrets # for reaching out slack
-        #       - my-restricted-context # will only run if the user who approves the hold job is a member of the security group assigned to the context my-restricted-context
-        #     requires:
-        #       - terraform_plan_production
-        #     filters:
-        #      branches:
-        #         only:
-        #           - master
         - pause_workflow:
             type: approval
             requires:
               - terraform_plan_production
-              # - slack/on-hold
             filters:
             branches:
                 only:
@@ -117,14 +95,10 @@ jobs:
       - run:
           name: terraform init
           command: |
-            terraform init #-reconfigure -backend-config backends/stg.tf
-      # - slack/status:
-      #     fail_only: true
-      #     failure_message:
-      #     webhook: $webhook
-    # persist_to_workspace:
-    #   root: .
-    #   paths:
+            terraform init 
+    persist_to_workspace:
+      root: .
+      paths:
   terraform_plan_production:
     description: Plans
     # working_directory: xxxxx
@@ -132,34 +106,29 @@ jobs:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
       - checkout
-      - run: terraform workspace new <workspace-name>
+      - attach_workspace:
+          at: .
+      - run: terraform workspace new betul_test
       - run:
           name: terraform plan
           command: |
             terraform plan -output plan.tf
-      # - slack/notify:
-      #     event: always
-      #     message: |
-      #     [${CIRCLE_USERNAME}] Please check and approve Jobs to manually create the staging infrastructure.
-      #     https://circleci.com/workflow-run/${CIRCLE_WORKFLOW_ID}
-    # persist_to_workspace:
-    #   root: .
-    #   paths:
-    #     - .
-  # slack/on-hold:
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
   terraform_apply_production:
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
     steps:
-      # - slack/notify:
-      #     event: always
-      #     message: "Starting deployment of << parameters.stack-name >> to <<parameters.env >>"
       - attach_workspace:
           at: .
-      - run: terraform apply plan.tf #-var-file var_files/<file name>
-      # - slack/status:
-      #     failure_message: "Deployment of << parameters.stack-name >> to <<parameters.env >> has failed!"
-      #     success_message: "Deployment of << parameters.stack-name >> to <<parameters.env >> has succeeded!"
+      - run: terraform apply plan.tf 
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+
   destroy:
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
