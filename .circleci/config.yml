@@ -32,7 +32,7 @@ workflows:
             - plan-destroy
   staging_infrastructure:
     jobs:
-      - terraform_init_plan_staging
+      - terraform_init_plan_staging:
           filters:
             branches:
               ignore:
