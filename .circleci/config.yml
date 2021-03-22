@@ -78,7 +78,7 @@ jobs:
       - run:
           name: terraform destroy
           command: |
-            terraform destroy -auto-approve tfdestroy
+            terraform apply -auto-approve tfdestroy
 
 
       # - slack/status:
