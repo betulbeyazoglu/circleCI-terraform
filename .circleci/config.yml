@@ -56,7 +56,7 @@ workflows:
             - plan-destroy_stg
 jobs:
   terraform_init_plan_production:
-    description: Inits terraform directory for staging
+    description: Inits terraform directory for production 
     # working_directory: 
     docker:
       - image: docker.mirror.hashicorp.services/hashicorp/terraform:light
