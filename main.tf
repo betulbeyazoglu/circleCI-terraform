@@ -28,6 +28,6 @@ resource "aws_instance" "project-bb" {
               sudo bash -c 'echo <h1>Deployed via Terraform</h1> > /var/www/html/index.html'
               EOF
   tags = {
-    Name = "project-bb"
+    Name = "project-bb-test"
   }
 }
